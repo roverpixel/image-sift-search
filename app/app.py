@@ -11,9 +11,8 @@ from qdrant_client.http.models import SearchRequest
 
 # Directories
 THUMBNAILS_DIR = "thumbnails"
-QDRANT_DATA_DIR = "qdrant_data"
 COLLECTION_NAME = "sift_features"
-STATIC_DIR = "static"
+STATIC_DIR = "app/static"
 
 app = FastAPI()
 
@@ -33,10 +32,11 @@ app.mount("/thumbnails", StaticFiles(directory=THUMBNAILS_DIR), name="thumbnails
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Initialize Qdrant Client and SIFT
+qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
 try:
-    client = QdrantClient(path=QDRANT_DATA_DIR)
+    client = QdrantClient(url=qdrant_url)
 except Exception as e:
-    print(f"Error connecting to Qdrant: {e}")
+    print(f"Error connecting to Qdrant at {qdrant_url}: {e}")
     client = None
 
 sift = cv2.SIFT_create()
