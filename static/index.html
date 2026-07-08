@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mars Terrain Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #c1440e; /* Mars red */
+        }
+        #drop-zone {
+            width: 100%;
+            max-width: 600px;
+            height: 200px;
+            border: 2px dashed #c1440e;
+            border-radius: 10px;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+            color: #777;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #drop-zone.hover {
+            background-color: #ffe8e0;
+        }
+        #file-input {
+            display: none;
+        }
+        #status {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+        #results {
+            margin-top: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        .result-card {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            width: 200px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .result-card img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .result-card p {
+            margin: 10px 0 0;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+        .vote-count {
+            color: #c1440e;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Mars Terrain Image Search</h1>
+    <p>Upload a cropped image to find its source in the database.</p>
+
+    <div id="drop-zone">
+        <span>Drag & Drop your image here or Click to upload</span>
+        <input type="file" id="file-input" accept="image/*">
+    </div>
+
+    <div id="status"></div>
+
+    <div id="results"></div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+
+        // Click to upload
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop events
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('hover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('hover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                uploadFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                uploadFile(e.target.files[0]);
+            }
+        });
+
+        async function uploadFile(file) {
+            statusDiv.textContent = "Uploading and searching... This may take a moment.";
+            resultsDiv.innerHTML = '';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                    statusDiv.textContent = `Error: ${data.error}`;
+                    return;
+                }
+
+                statusDiv.textContent = `Search complete! Extracted ${data.total_features_extracted} features.`;
+                displayResults(data.matches);
+
+            } catch (error) {
+                console.error(error);
+                statusDiv.textContent = `An error occurred: ${error.message}`;
+            }
+        }
+
+        function displayResults(matches) {
+            if (!matches || matches.length === 0) {
+                resultsDiv.innerHTML = '<p>No matches found.</p>';
+                return;
+            }
+
+            matches.forEach(match => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+
+                const img = document.createElement('img');
+                img.src = match.thumbnail_url;
+                img.alt = match.filename;
+                // Add fallback image if thumbnail is not found
+                img.onerror = () => { img.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23eee%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22middle%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%20font-size%3D%2216%22%20fill%3D%22%23999%22%3ENo%20Thumbnail%3C%2Ftext%3E%3C%2Fsvg%3E'; };
+
+                const title = document.createElement('p');
+                title.textContent = match.filename;
+
+                const score = document.createElement('p');
+                score.innerHTML = `Votes: <span class="vote-count">${match.votes}</span>`;
+
+                card.appendChild(img);
+                card.appendChild(title);
+                card.appendChild(score);
+
+                resultsDiv.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
