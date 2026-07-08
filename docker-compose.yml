@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./images:/app/images
+      - ./thumbnails:/app/thumbnails
+      - ./qdrant_data:/app/qdrant_data
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  ingest:
+    build: .
+    command: python ingest.py
+    volumes:
+      - .:/app
+      - ./images:/app/images
+      - ./thumbnails:/app/thumbnails
+      - ./qdrant_data:/app/qdrant_data
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Run once and exit
+    profiles:
+      - ingest
