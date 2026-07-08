@@ -216,4 +216,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+<<<<<<< HEAD
 qdrant_data/
+=======
+
+# images
+*.png
+*.jpg
+
+# app dtaa
+images/
+qdrant_data/
+
+# build
+makefile
+>>>>>>> 66aac8d (container to port 7008, gitignore for images and db)

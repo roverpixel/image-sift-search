@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   qdrant:
     image: qdrant/qdrant:latest
@@ -11,7 +9,7 @@ services:
   web:
     build: .
     ports:
-      - "8000:8000"
+      - "7008:8000"
     volumes:
       - .:/app
       - ./images:/app/images
