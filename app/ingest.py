@@ -7,15 +7,14 @@ from qdrant_client.http.models import Distance, VectorParams, PointStruct
 # Directories
 IMAGES_DIR = "images"
 THUMBNAILS_DIR = "thumbnails"
-QDRANT_DATA_DIR = "qdrant_data"
 COLLECTION_NAME = "sift_features"
 
 # Make sure directories exist
 os.makedirs(THUMBNAILS_DIR, exist_ok=True)
-os.makedirs(QDRANT_DATA_DIR, exist_ok=True)
 
-print("Connecting to local Qdrant database...")
-client = QdrantClient(path=QDRANT_DATA_DIR)
+qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
+print(f"Connecting to Qdrant database at {qdrant_url}...")
+client = QdrantClient(url=qdrant_url)
 
 # Recreate the collection
 print(f"Recreating collection '{COLLECTION_NAME}'...")
