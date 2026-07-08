@@ -12,7 +12,7 @@ from qdrant_client.http.models import SearchRequest
 # Directories
 THUMBNAILS_DIR = "thumbnails"
 COLLECTION_NAME = "sift_features"
-STATIC_DIR = "app/static"
+STATIC_DIR = "/app/static"
 
 app = FastAPI()
 
