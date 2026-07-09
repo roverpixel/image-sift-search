@@ -16,12 +16,18 @@ qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
 print(f"Connecting to Qdrant database at {qdrant_url}...")
 client = QdrantClient(url=qdrant_url)
 
-# Recreate the collection
-print(f"Recreating collection '{COLLECTION_NAME}'...")
-client.recreate_collection(
-    collection_name=COLLECTION_NAME,
-    vectors_config=VectorParams(size=128, distance=Distance.EUCLID),
-)
+# Recreate the collection if it doesn't exist
+collections_response = client.get_collections()
+collection_names = [c.name for c in collections_response.collections]
+
+if COLLECTION_NAME not in collection_names:
+    print(f"Creating collection '{COLLECTION_NAME}'...")
+    client.recreate_collection(
+        collection_name=COLLECTION_NAME,
+        vectors_config=VectorParams(size=128, distance=Distance.EUCLID),
+    )
+else:
+    print(f"Collection '{COLLECTION_NAME}' already exists. Adding new data...")
 
 sift = cv2.SIFT_create()
 
