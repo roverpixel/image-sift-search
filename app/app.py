@@ -25,12 +25,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.middleware("http")
-async def add_root_path(request: Request, call_next):
-    prefix = request.headers.get("X-Forwarded-Prefix")
-    if prefix:
-        request.scope["root_path"] = prefix
-    return await call_next(request)
+class RootPathMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            headers = dict(scope.get("headers", []))
+            prefix = headers.get(b"x-forwarded-prefix")
+            if prefix:
+                prefix_str = prefix.decode("latin1")
+                scope["root_path"] = prefix_str
+                path = scope.get("path", "")
+                if not path.startswith(prefix_str):
+                    scope["path"] = prefix_str + path
+        await self.app(scope, receive, send)
+
+app.add_middleware(RootPathMiddleware)
 
 
 os.makedirs(THUMBNAILS_DIR, exist_ok=True)
