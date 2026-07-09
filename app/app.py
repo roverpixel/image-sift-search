@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 from collections import Counter
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +16,7 @@ STATIC_DIR = "/app/static"
 
 app = FastAPI()
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,6 +24,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_root_path(request: Request, call_next):
+    prefix = request.headers.get("X-Forwarded-Prefix")
+    if prefix:
+        request.scope["root_path"] = prefix
+    return await call_next(request)
+
 
 os.makedirs(THUMBNAILS_DIR, exist_ok=True)
 os.makedirs(STATIC_DIR, exist_ok=True)
@@ -50,7 +59,7 @@ async def read_root():
     return "<h1>Index.html not found</h1>"
 
 @app.post("/search")
-async def search_image(file: UploadFile = File(...)):
+async def search_image(request: Request, file: UploadFile = File(...)):
     if not client:
         return {"error": "Qdrant client is not initialized."}
 
@@ -119,7 +128,7 @@ async def search_image(file: UploadFile = File(...)):
         matches.append({
             "filename": filename,
             "votes": votes,
-            "thumbnail_url": f"/thumbnails/{filename}"
+            "thumbnail_url": f"{request.scope.get('root_path', '')}/thumbnails/{filename}"
         })
 
     return {"matches": matches, "total_features_extracted": len(descriptors)}

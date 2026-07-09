@@ -126,7 +126,7 @@
             formData.append('file', file);
 
             try {
-                const response = await fetch('/search', {
+                const response = await fetch('search', {
                     method: 'POST',
                     body: formData
                 });
