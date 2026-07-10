@@ -131,4 +131,10 @@ async def search_image(request: Request, file: UploadFile = File(...)):
             "thumbnail_url": f"{request.scope.get('root_path', '')}/thumbnails/{filename}"
         })
 
-    return {"matches": matches, "total_features_extracted": len(descriptors)}
+    mosaic_url_prefix = os.environ.get("MOSAIC_URL_PREFIX", "")
+
+    return {
+        "matches": matches,
+        "total_features_extracted": len(descriptors),
+        "mosaic_url_prefix": mosaic_url_prefix
+    }
