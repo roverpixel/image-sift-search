@@ -27,22 +27,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class ProxyHeadersMiddleware:
+class RootPathMiddleware:
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] in ("http", "websocket"):
+        if scope["type"] == "http":
             headers = dict(scope.get("headers", []))
-            # ASGI headers are byte strings, lowercase keys
-            prefix = headers.get(b"x-forwarded-prefix", b"").decode("utf-8")
+            prefix = headers.get(b"x-forwarded-prefix")
             if prefix:
-                scope["root_path"] = prefix
-                if not scope["path"].startswith(prefix):
-                    scope["path"] = prefix + scope["path"]
+                prefix_str = prefix.decode("latin1")
+                scope["root_path"] = prefix_str
+                path = scope.get("path", "")
+                if not path.startswith(prefix_str):
+                    scope["path"] = prefix_str + path
         await self.app(scope, receive, send)
 
-app.add_middleware(ProxyHeadersMiddleware)
+app.add_middleware(RootPathMiddleware)
 
 
 os.makedirs(THUMBNAILS_DIR, exist_ok=True)
