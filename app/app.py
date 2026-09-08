@@ -83,7 +83,7 @@ async def search_image(request: Request, file: UploadFile = File(...)):
 
     # Extract SIFT features
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    keypoints, descriptors = sift.detectAndCompute(gray, None)
+    _, descriptors = sift.detectAndCompute(gray, None)
 
     if descriptors is None:
         return {"error": "No features found in the uploaded image.", "matches": []}
