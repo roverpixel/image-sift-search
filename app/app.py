@@ -17,9 +17,11 @@ STATIC_DIR = "/app/static"
 app = FastAPI()
 
 
+allowed_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:7008,http://localhost:8000,http://localhost,http://127.0.0.1:7008,http://127.0.0.1:8000,http://127.0.0.1").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -84,7 +86,7 @@ async def search_image(request: Request, file: UploadFile = File(...)):
 
     # Extract SIFT features
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    keypoints, descriptors = sift.detectAndCompute(gray, None)
+    _, descriptors = sift.detectAndCompute(gray, None)
 
     if descriptors is None:
         return {"error": "No features found in the uploaded image.", "matches": []}
@@ -142,4 +144,10 @@ async def search_image(request: Request, file: UploadFile = File(...)):
             "thumbnail_url": f"{request.scope.get('root_path', '')}/thumbnails/{filename}"
         })
 
-    return {"matches": matches, "total_features_extracted": len(descriptors)}
+    mosaic_url_prefix = os.environ.get("MOSAIC_URL_PREFIX", "")
+
+    return {
+        "matches": matches,
+        "total_features_extracted": len(descriptors),
+        "mosaic_url_prefix": mosaic_url_prefix
+    }
