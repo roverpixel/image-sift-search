@@ -17,9 +17,11 @@ STATIC_DIR = "/app/static"
 app = FastAPI()
 
 
+allowed_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:7008,http://localhost:8000,http://localhost,http://127.0.0.1:7008,http://127.0.0.1:8000,http://127.0.0.1").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
