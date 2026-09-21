@@ -86,7 +86,7 @@ async def search_image(request: Request, file: UploadFile = File(...)):
 
     # Extract SIFT features
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    _, descriptors = sift.detectAndCompute(gray, None)
+    keypoints, descriptors = sift.detectAndCompute(gray, None)
 
     if descriptors is None:
         return {"error": "No features found in the uploaded image.", "matches": []}
@@ -97,7 +97,7 @@ async def search_image(request: Request, file: UploadFile = File(...)):
     # Perform batched search for efficiency
     # Qdrant client allows sending multiple search requests at once
     search_queries = []
-    for desc in descriptors:
+    for kp, desc in zip(keypoints, descriptors):
         search_queries.append(
             SearchRequest(
                 vector=desc.tolist(),
@@ -123,26 +123,53 @@ async def search_image(request: Request, file: UploadFile = File(...)):
             print(f"Error during search_batch: {e}")
             pass
 
-    # Tally votes based on filename payload
-    for result_list in all_results:
+    # Group matched keypoints by filename
+    filename_matches = {}
+
+    # all_results matches search_queries indices
+    for query_idx, result_list in enumerate(all_results):
+        query_kp = keypoints[query_idx]
         for scored_point in result_list:
             if scored_point.payload and "filename" in scored_point.payload:
                 filename = scored_point.payload["filename"]
-                # The score in L2 distance is distance (lower is better)
-                # But Qdrant by default returns similarity for Cosine/Dot. For L2 it's just distance.
-                # A simple voting mechanism: +1 vote for each appearance in top K
-                filename_votes[filename] += 1
+                if "x" in scored_point.payload and "y" in scored_point.payload:
+                    if filename not in filename_matches:
+                        filename_matches[filename] = {"src_pts": [], "dst_pts": []}
 
-    # Get top 10 files by vote count
+                    filename_matches[filename]["src_pts"].append(query_kp.pt)
+                    filename_matches[filename]["dst_pts"].append(
+                        (scored_point.payload["x"], scored_point.payload["y"])
+                    )
+
+    # Calculate inliers for each file
+    for filename, pts in filename_matches.items():
+        src_pts = np.float32(pts["src_pts"]).reshape(-1, 1, 2)
+        dst_pts = np.float32(pts["dst_pts"]).reshape(-1, 1, 2)
+
+        inliers_count = 0
+        if len(src_pts) >= 4:
+            # Need at least 4 points to find a homography
+            H, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+            if mask is not None:
+                inliers_count = int(np.sum(mask))
+        else:
+            # Fallback if less than 4 points are matched, though it's not a reliable homography
+            # They don't have enough geometric info to establish a shape
+            inliers_count = 0
+
+        filename_votes[filename] = inliers_count
+
+    # Get top 10 files by inlier count
     top_10 = filename_votes.most_common(10)
 
     matches = []
-    for filename, votes in top_10:
-        matches.append({
-            "filename": filename,
-            "votes": votes,
-            "thumbnail_url": f"{request.scope.get('root_path', '')}/thumbnails/{filename}"
-        })
+    for filename, inliers in top_10:
+        if inliers > 0:
+            matches.append({
+                "filename": filename,
+                "votes": inliers, # Keeping "votes" key for backward compatibility in JSON, but it represents inliers
+                "thumbnail_url": f"{request.scope.get('root_path', '')}/thumbnails/{filename}"
+            })
 
     mosaic_url_prefix = os.environ.get("MOSAIC_URL_PREFIX", "")
 

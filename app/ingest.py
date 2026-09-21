@@ -67,18 +67,24 @@ for i, filename in enumerate(image_files):
 
     # Extract SIFT features
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    _, descriptors = sift.detectAndCompute(gray, None)
+    keypoints, descriptors = sift.detectAndCompute(gray, None)
 
     if descriptors is None:
         print(f"  Warning: No features found in {filename}.")
         continue
 
     # Add descriptors to batch
-    for desc in descriptors:
+    for kp, desc in zip(keypoints, descriptors):
         point_id = str(uuid.uuid4())
         # Qdrant client needs vectors as lists of floats
         vector = desc.tolist()
-        payload = {"filename": filename}
+        payload = {
+            "filename": filename,
+            "x": kp.pt[0],
+            "y": kp.pt[1],
+            "size": kp.size,
+            "angle": kp.angle
+        }
 
         points_batch.append(
             PointStruct(id=point_id, vector=vector, payload=payload)
