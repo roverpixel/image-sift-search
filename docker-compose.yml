@@ -18,6 +18,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - QDRANT_URL=http://qdrant:6333
+      - MOSAIC_URL_PREFIX=${MOSAIC_URL_PREFIX}  # Pulled from host/.env and passed to container
+
     depends_on:
       - qdrant
 
