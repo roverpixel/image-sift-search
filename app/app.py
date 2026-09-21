@@ -141,8 +141,18 @@ async def search_image(request: Request, file: UploadFile = File(...)):
                         (scored_point.payload["x"], scored_point.payload["y"])
                     )
 
-    # Calculate inliers for each file
+    # Count raw descriptor matches for each file
+    raw_match_counts = Counter()
     for filename, pts in filename_matches.items():
+        raw_match_counts[filename] = len(pts["src_pts"])
+
+    # Pre-filter to the top 200 candidates based on raw match counts
+    top_candidates = raw_match_counts.most_common(200)
+
+    # Calculate inliers for the top candidates
+    candidate_scores = []
+    for filename, raw_count in top_candidates:
+        pts = filename_matches[filename]
         src_pts = np.float32(pts["src_pts"]).reshape(-1, 1, 2)
         dst_pts = np.float32(pts["dst_pts"]).reshape(-1, 1, 2)
 
@@ -157,18 +167,27 @@ async def search_image(request: Request, file: UploadFile = File(...)):
             # They don't have enough geometric info to establish a shape
             inliers_count = 0
 
-        filename_votes[filename] = inliers_count
+        candidate_scores.append({
+            "filename": filename,
+            "inliers": inliers_count,
+            "match_count": raw_count
+        })
 
-    # Get top 10 files by inlier count
-    top_10 = filename_votes.most_common(10)
+    # Sort candidates by inlier count (descending)
+    candidate_scores.sort(key=lambda x: x["inliers"], reverse=True)
+
+    # Get top 50 files by inlier count
+    top_50 = candidate_scores[:50]
 
     matches = []
-    for filename, inliers in top_10:
-        if inliers > 0:
+    for item in top_50:
+        if item["inliers"] > 0:
             matches.append({
-                "filename": filename,
-                "votes": inliers, # Keeping "votes" key for backward compatibility in JSON, but it represents inliers
-                "thumbnail_url": f"{request.scope.get('root_path', '')}/thumbnails/{filename}"
+                "filename": item["filename"],
+                "votes": item["inliers"], # Keeping "votes" key for backward compatibility in JSON, but it represents inliers
+                "inliers": item["inliers"],
+                "match_count": item["match_count"],
+                "thumbnail_url": f"{request.scope.get('root_path', '')}/thumbnails/{item['filename']}"
             })
 
     mosaic_url_prefix = os.environ.get("MOSAIC_URL_PREFIX", "")

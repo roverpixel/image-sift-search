@@ -70,7 +70,7 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 20px;
+            gap: 15px;
         }
         .result-card {
             background: #111827;
@@ -78,7 +78,7 @@
             border-top: 3px solid #0088aa;
             border-radius: 4px;
             padding: 10px;
-            width: 200px;
+            width: 150px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.5);
             transition: transform 0.2s, box-shadow 0.2s;
         }
@@ -97,9 +97,16 @@
             font-size: 14px;
             word-wrap: break-word;
         }
-        .vote-count {
+        .stat-value {
             color: #0088aa;
             font-weight: bold;
+        }
+        .stats-container {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-top: 5px;
+            color: #8b949e;
         }
     </style>
 </head>
@@ -219,13 +226,18 @@
 
                 const title = document.createElement('p');
                 title.textContent = match.filename;
+                title.style.fontSize = "12px";
 
-                const score = document.createElement('p');
-                score.innerHTML = `Inliers: <span class="vote-count">${match.votes}</span>`;
+                const stats = document.createElement('div');
+                stats.className = 'stats-container';
+                stats.innerHTML = `
+                    <span>Inliers: <span class="stat-value">${match.inliers}</span></span>
+                    <span>Matches: <span class="stat-value">${match.match_count}</span></span>
+                `;
 
                 card.appendChild(linkedElement);
                 card.appendChild(title);
-                card.appendChild(score);
+                card.appendChild(stats);
 
                 resultsDiv.appendChild(card);
             });
