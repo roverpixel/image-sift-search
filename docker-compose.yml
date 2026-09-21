@@ -25,11 +25,15 @@ services:
 
   ingest:
     build: .
-    command: python app/ingest.py
+    command: python ingest.py
     volumes:
       - ./app:/app
+      # images to scan
       - ./images:/app/images
+      # scale images/ to thumbnails/ for web browsing
       - ./thumbnails:/app/thumbnails
+      # for original images
+      - /mnt/group/sw/vm_data/msldev-proc1/msl/dev/surface/web/panos/:/mnt/group/sw/vm_data/msldev-proc1/msl/dev/surface/web/panos/
     environment:
       - PYTHONUNBUFFERED=1
       - QDRANT_URL=http://qdrant:6333
